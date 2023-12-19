@@ -1,10 +1,37 @@
-export AIRFLOW_HOME=${PWD}/airflow
-AIRFLOW_VERSION=2.3.3
-PYTHON_VERSION="$(python --version | cut -d " " -f 2 | cut -d "." -f 1-2)"
-CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
+version: '3'
+services:
+  postgresql:
+    image: postgres:latest
+    volumes:
+      - ./postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
 
-# Install Airflow (may need to upgrade pip)
-pip install "apache-airflow==${AIRFLOW_VERSION}" --constraint "${CONSTRAINT_URL}"
+  airflow:
+    build:
+      context: ./airflow
+    depends_on:
+      - postgresql
+    environment:
+      - AIRFLOW_DATABASE_URL=${AIRFLOW_DATABASE_URL}
 
-# Initialize DB (SQLite by default)
-airflow db init
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-core:1.7.2
+    volumes:
+      - ./dbt:/dbt
+    depends_on:
+      - postgresql
+      - airflow
+    environment:
+      - DBT_PROFILES_DIR=/dbt
+
+  redash:
+    build:
+      context: ./redash
+    depends_on:
+      - postgresql
+      - dbt
+    environment:
+      REDASH_DATABASE_URL: postgresql://${REDASH_DATABASE_USER}:${REDASH_DATABASE_PASSWORD}@postgresql/${REDASH_DATABASE_DB}

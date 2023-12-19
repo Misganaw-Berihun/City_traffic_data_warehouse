@@ -1,1 +1,0 @@
-apache-airflow[postgres]==2.7
