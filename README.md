@@ -9,6 +9,6 @@ This repository holds the code and configuration for a scalable data warehouse d
 # Getting Started
 Clone the repository:
    ```bash
-    git clone https://github.com/your-username/traffic-data-warehouse.git
+    git clone https://github.com/Misganaw-Berihun/traffic-data-warehouse.git
     cd traffic-data-warehouse
 
