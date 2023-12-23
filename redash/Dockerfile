@@ -1,1 +1,0 @@
-FROM redash/redash:latest

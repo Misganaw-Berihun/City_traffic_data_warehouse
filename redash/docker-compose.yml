@@ -1,0 +1,78 @@
+version: "2"
+x-redash-service: &redash-service
+  image: redash/redash:latest
+  depends_on:
+    # - postgres
+    - redis
+  env_file: redash.env
+  restart: always
+services:
+  server:
+    <<: *redash-service
+    command: server
+    ports:
+      - "5001:5000"
+    environment:
+      REDASH_WEB_WORKERS: 4
+    networks:
+      - proxynet
+  
+  scheduler:
+    <<: *redash-service
+    command: scheduler
+    environment:
+      QUEUES: "celery"
+      WORKERS_COUNT: 1
+    networks:
+      - proxynet
+  scheduled_worker:
+    <<: *redash-service
+    command: worker
+    environment:
+      QUEUES: "scheduled_queries,schemas"
+      WORKERS_COUNT: 1
+    networks:
+      - proxynet
+  adhoc_worker:
+    <<: *redash-service
+    command: worker
+    environment:
+      QUEUES: "queries"
+      WORKERS_COUNT: 2
+    networks:
+      - proxynet
+  redis:
+    image: redis:5.0-alpine
+    restart: always
+    networks:
+      - proxynet 
+    
+  # postgres:
+  #   image: postgres:13
+  #   environment:
+  #     POSTGRES_USER: airflow
+  #     POSTGRES_PASSWORD: airflow
+  #     POSTGRES_DB: airflow
+  #   ports:
+  #     - "5434:5432"
+  #   volumes:
+  #     - postgres-db-volume:/var/lib/postgresql/data
+  #   restart: always
+  #   networks:
+  #     - proxynet
+  nginx:
+    image: redash/nginx:latest
+    ports:
+      - "8180:80"
+    depends_on:
+      - server
+    links:
+      - server:redash
+    restart: always
+    networks:
+      - proxynet
+
+networks:
+  proxynet:
+    external:
+      name: custom_network
